@@ -7,10 +7,13 @@ use Illuminate\Http\Request;
 use App\Http\Requests\AuthenticationRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use Google_Client;
+use App\Services\GoogleAuthService;
 
 class AuthenticationController extends BaseController
 {
+    public function __construct(
+        private GoogleAuthService $googleAuthService
+    ) {}
 
     /**
      * Store a newly created resource in storage.
@@ -19,8 +22,7 @@ class AuthenticationController extends BaseController
     {
         $id_token = $request->input('token');
 
-        $client = new Google_Client(['client_id' => env('GOOGLE_CLIENT_ID')]);
-        $payload = $client->verifyIdToken($id_token);
+        $payload = $this->googleAuthService->verifyIdToken($id_token);
 
         if ($payload) {
             $user = User::firstOrCreate(
@@ -36,6 +38,7 @@ class AuthenticationController extends BaseController
 
             return (new UserResource($user))
             ->response()
+            ->setStatusCode(200)
             ->header('AccessToken', $token);
         } else {
             return response()->json(['error' => 'Invalid ID token'], 401);
