@@ -21,22 +21,21 @@ services:
       - app
 
   db:
-    image: mysql:8.0
+    image: postgres:18-alpine
     ports:
-      - 3307:3306
-    environment:
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-      TZ: "Asia/Tokyo"
+      - "5432:5432"
     volumes:
-      - mysql-volume:/var/lib/mysql
+      - db-data:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Tokyo
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
-  mysql-volume:
+  db-data:
