@@ -2,16 +2,16 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
 use App\Services\GoogleAuthService;
-use Tests\TestCase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-
+use Tests\TestCase;
 
 class AuthenticationControllerTest extends TestCase
 {
     use RefreshDatabase;
+
     /**
      * A basic test example.
      */
