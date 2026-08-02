@@ -15,15 +15,14 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('address');
-            $table->double('latitude', 10, 7);
-            $table->double('longitude', 10, 7);
+            $table->decimal('latitude', 10, 7);
+            $table->decimal('longitude', 10, 7);
             $table->string('place_id')->unique();
             $table->timestamps();
         });
 
         Schema::table('shrines', function (Blueprint $table) {
             $table->index(['latitude', 'longitude']);
-            $table->index('place_id');
         });
     }
 

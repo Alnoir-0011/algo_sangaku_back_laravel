@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\Role;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -13,7 +14,7 @@ use Illuminate\Support\Carbon;
  * @property-read string $name
  * @property-read string $email
  * @property-read string $nickname
- * @property-read string $role
+ * @property-read Role $role
  * @property-read Carbon|null $created_at
  * @property-read Carbon|null $updated_at
  */

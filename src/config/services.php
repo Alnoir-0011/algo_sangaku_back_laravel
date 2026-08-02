@@ -38,4 +38,8 @@ return [
         'api_key' => env('GOOGLE_MAP_API_KEY'),
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+    ],
+
 ];

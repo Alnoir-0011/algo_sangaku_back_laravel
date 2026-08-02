@@ -1,13 +1,10 @@
 <?php
 
+use App\Exceptions\GooglePlacesApiException;
 use App\Models\Shrine;
 use App\Services\PlaceApiService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
-use Tests\TestCase;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 function fakeGooglePlacesSearch(array $places, int $status = 200): void
 {
@@ -33,7 +30,7 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('place-id-1', '八幡神社', '東京都千代田区1-1', 35.6895, 139.6917),
             ]);
 
-            PlaceApiService::searchByBounds('35.0', '36.0', '139.0', '140.0');
+            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             $shrine = Shrine::where('place_id', 'place-id-1')->first();
 
@@ -57,7 +54,7 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('place-id-1', '八幡神社', '更新後の住所', 35.0, 139.0),
             ]);
 
-            PlaceApiService::searchByBounds('35.0', '36.0', '139.0', '140.0');
+            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             expect(Shrine::where('place_id', 'place-id-1')->count())->toBe(1);
 
@@ -73,7 +70,7 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('excluded-place', "テスト{$keyword}"),
             ]);
 
-            PlaceApiService::searchByBounds('35.0', '36.0', '139.0', '140.0');
+            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             expect(Shrine::where('place_id', 'excluded-place')->exists())->toBeFalse();
         })->with(['寺', '手水舎', '社務所', '授与所', '鳥居']);
@@ -84,19 +81,53 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('temple-1', '○○寺'),
             ]);
 
-            PlaceApiService::searchByBounds('35.0', '36.0', '139.0', '140.0');
+            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             expect(Shrine::where('place_id', 'shrine-1')->exists())->toBeTrue();
             expect(Shrine::where('place_id', 'temple-1')->exists())->toBeFalse();
         });
+
+        test('returns a reindexed list even when a non-last place is filtered out', function () {
+            fakeGooglePlacesSearch([
+                shrinePlace('temple-1', '○○寺'),
+                shrinePlace('shrine-1', '八幡神社'),
+            ]);
+
+            $result = PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
+
+            expect(array_is_list($result))->toBeTrue();
+            expect($result)->toHaveCount(1);
+            expect($result[0]->place_id)->toBe('shrine-1');
+        });
+    });
+
+    describe('invalid place data from the api', function () {
+        test('skips a place missing required fields without throwing and without persisting it', function () {
+            fakeGooglePlacesSearch([
+                [
+                    'id' => 'incomplete-place',
+                    'displayName' => ['text' => '不明な神社'],
+                    // formattedAddress is missing
+                    'location' => ['latitude' => 35.0, 'longitude' => 139.0],
+                ],
+                shrinePlace('shrine-1', '八幡神社'),
+            ]);
+
+            $result = PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
+
+            expect(array_is_list($result))->toBeTrue();
+            expect($result)->toHaveCount(1);
+            expect(Shrine::where('place_id', 'incomplete-place')->exists())->toBeFalse();
+            expect(Shrine::where('place_id', 'shrine-1')->exists())->toBeTrue();
+        });
     });
 
     describe('when the api request fails', function () {
-        test('throws an exception and persists nothing', function () {
+        test('throws a GooglePlacesApiException and persists nothing', function () {
             fakeGooglePlacesSearch([], 400);
 
-            expect(fn () => PlaceApiService::searchByBounds('35.0', '36.0', '139.0', '140.0'))
-                ->toThrow(Exception::class, 'Google Places API request failed');
+            expect(fn () => PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0))
+                ->toThrow(GooglePlacesApiException::class, 'Google Places API request failed');
 
             expect(Shrine::count())->toBe(0);
         });
@@ -108,17 +139,17 @@ describe('PlaceApiService::searchByBounds', function () {
 
             fakeGooglePlacesSearch([]);
 
-            PlaceApiService::searchByBounds('35.0', '36.0', '139.0', '140.0');
+            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             Http::assertSent(function (Request $request) {
                 return $request->url() === 'https://places.googleapis.com/v1/places:searchText'
                     && $request->hasHeader('Content-Type', 'application/json')
                     && $request->hasHeader('X-Goog-Api-Key', 'test-api-key')
                     && $request['textQuery'] === '神社 -寺'
-                    && $request['locationRestriction']['rectangle']['low']['latitude'] === '35.0'
-                    && $request['locationRestriction']['rectangle']['low']['longitude'] === '139.0'
-                    && $request['locationRestriction']['rectangle']['high']['latitude'] === '36.0'
-                    && $request['locationRestriction']['rectangle']['high']['longitude'] === '140.0';
+                    && $request['locationRestriction']['rectangle']['low']['latitude'] === 35.0
+                    && $request['locationRestriction']['rectangle']['low']['longitude'] === 139.0
+                    && $request['locationRestriction']['rectangle']['high']['latitude'] === 36.0
+                    && $request['locationRestriction']['rectangle']['high']['longitude'] === 140.0;
             });
         });
     });

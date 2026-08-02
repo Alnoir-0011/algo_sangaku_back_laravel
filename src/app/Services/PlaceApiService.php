@@ -2,12 +2,25 @@
 
 namespace App\Services;
 
+use App\Exceptions\GooglePlacesApiException;
 use App\Models\Shrine;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class PlaceApiService
 {
     private const GOOGLE_PLACE_SEARCH_TEXT_URI = 'https://places.googleapis.com/v1/places:searchText';
+
+    private const ELIMINATE_KEYWORDS = ['寺', '手水舎', '社務所', '授与所', '鳥居'];
+
+    public static function searchByBounds(float $lowLat, float $highLat, float $lowLng, float $highLng): array
+    {
+        $searchResults = self::textSearchByLocationRestriction($lowLat, $highLat, $lowLng, $highLng);
+
+        return self::persistPlaces($searchResults);
+    }
 
     private static function headers(): array
     {
@@ -18,17 +31,7 @@ class PlaceApiService
         ];
     }
 
-    private const ELIMINATE_KEYWORDS = ['寺', '手水舎', '社務所', '授与所', '鳥居'];
-
-    public static function searchByBounds(string $lowLat, string $highLat, string $lowLng, string $highLng)
-    {
-        $searchResults = self::textSearchByLocationRestriction(
-            $lowLat, $highLat, $lowLng, $highLng);
-
-        return self::persistPlaces(self::eliminateNonShrine($searchResults));
-    }
-
-    private static function textSearchByLocationRestriction(string $lowLat, string $highLat, string $lowLng, string $highLng)
+    private static function textSearchByLocationRestriction(float $lowLat, float $highLat, float $lowLng, float $highLng): array
     {
         $params = [
             'textQuery' => '神社 -寺',
@@ -53,23 +56,34 @@ class PlaceApiService
         return self::performSearchTextRequest($params);
     }
 
-    private static function performSearchTextRequest($params)
+    private static function performSearchTextRequest(array $params): array
     {
-        $response = Http::withHeaders(self::headers())
+        $response = Http::connectTimeout(3)
+            ->timeout(10)
+            ->withHeaders(self::headers())
             ->post(self::GOOGLE_PLACE_SEARCH_TEXT_URI, $params);
 
-        if ($response->successful()) {
-            return self::eliminateNonShrine($response->json()['places'] ?? []);
-        } else {
-            // Log the response for debugging
-            \Log::info('Google Places API response: '.$response->body());
-            throw new \Exception('Google Places API request failed: '.$response->body());
+        if (! $response->successful()) {
+            Log::warning('Google Places API request failed', [
+                'status' => $response->status(),
+                'body' => Str::limit($response->body(), 500),
+            ]);
+
+            throw new GooglePlacesApiException;
         }
+
+        return self::eliminateNonShrine($response->json()['places'] ?? []);
     }
 
-    private static function persistPlaces($filteredPlaces)
+    private static function persistPlaces(array $filteredPlaces): array
     {
-        return array_map(function ($place) {
+        $shrines = array_map(function (array $place) {
+            if (! self::validatePlace($place)) {
+                Log::warning('Skipped invalid place data from Google Places API', ['place' => $place]);
+
+                return null;
+            }
+
             return Shrine::updateOrCreate(
                 ['place_id' => $place['id']],
                 [
@@ -80,18 +94,33 @@ class PlaceApiService
                 ]
             );
         }, $filteredPlaces);
+
+        return array_values(array_filter($shrines));
     }
 
-    private static function eliminateNonShrine($places)
+    private static function validatePlace(array $place): bool
     {
-        return array_filter($places, function ($place) {
+        $validator = Validator::make($place, [
+            'id' => 'required|string|max:255',
+            'displayName.text' => 'required|string|max:255',
+            'formattedAddress' => 'required|string|max:255',
+            'location.latitude' => 'required|numeric|min:-90|max:90',
+            'location.longitude' => 'required|numeric|min:-180|max:180',
+        ]);
+
+        return $validator->passes();
+    }
+
+    private static function eliminateNonShrine(array $places): array
+    {
+        return array_values(array_filter($places, function (array $place) {
             foreach (self::ELIMINATE_KEYWORDS as $keyword) {
-                if (strpos($place['displayName']['text'], $keyword) !== false) {
+                if (str_contains($place['displayName']['text'] ?? '', $keyword)) {
                     return false;
                 }
             }
 
             return true;
-        });
+        }));
     }
 }

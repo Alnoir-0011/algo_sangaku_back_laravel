@@ -93,5 +93,21 @@ describe('AuthenticationController', function () {
                 'message' => 'signout successful',
             ]);
         });
+
+        test('returns 401 when not authenticated', function () {
+            $response = $this->deleteJson('/api/v1/authentication');
+
+            expect($response->status())->toBe(401);
+
+            expect($response->json())->toMatchArray([
+                'message' => 'Unauthenticated',
+            ]);
+        });
+
+        test('returns 401 instead of redirecting when the request does not send an Accept header', function () {
+            $response = $this->delete('/api/v1/authentication');
+
+            expect($response->status())->toBe(401);
+        });
     });
 });

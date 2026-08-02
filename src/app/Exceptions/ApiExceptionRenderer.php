@@ -12,6 +12,6 @@ final class ApiExceptionRenderer
             'message' => $message,
             'errors' => array_filter([$details]),
             ...$extras,
-        ]), $status);
+        ], fn ($value) => ! is_null($value)), $status);
     }
 }
