@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use App\Models\Shrine;
+use Illuminate\Support\Facades\Http;
 
 class PlaceApiService
 {
@@ -20,7 +20,7 @@ class PlaceApiService
 
     private const ELIMINATE_KEYWORDS = ['寺', '手水舎', '社務所', '授与所', '鳥居'];
 
-    static function searchByBounds(string $lowLat, string $highLat, string $lowLng, string $highLng)
+    public static function searchByBounds(string $lowLat, string $highLat, string $lowLng, string $highLng)
     {
         $searchResults = self::textSearchByLocationRestriction(
             $lowLat, $highLat, $lowLng, $highLng);
