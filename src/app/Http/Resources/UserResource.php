@@ -4,7 +4,19 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property-read int $id
+ * @property-read string $provider
+ * @property-read string $uid
+ * @property-read string $name
+ * @property-read string $email
+ * @property-read string $nickname
+ * @property-read string $role
+ * @property-read Carbon|null $created_at
+ * @property-read Carbon|null $updated_at
+ */
 class UserResource extends JsonResource
 {
     /**

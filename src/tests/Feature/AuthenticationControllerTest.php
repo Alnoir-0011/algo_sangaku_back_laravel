@@ -1,107 +1,97 @@
 <?php
 
-namespace Tests\Feature;
-
 use App\Models\User;
 use App\Services\GoogleAuthService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Tests\TestCase;
 
-class AuthenticationControllerTest extends TestCase
-{
-    use RefreshDatabase;
+describe('AuthenticationController', function () {
+    describe('POST /api/v1/authentication', function () {
+        test('creates a new user on first google login', function () {
+            $this->mock(GoogleAuthService::class, function ($mock) {
+                $mock->shouldReceive('verifyIdToken')
+                    ->once()
+                    ->andReturn([
+                        'sub' => 'google-user-id',
+                        'name' => 'Test User',
+                        'email' => 'test@example.com',
+                    ]);
+            });
 
-    /**
-     * A basic test example.
-     */
-    public function test_creates_new_user_on_first_google_login(): void
-    {
-        $this->mock(GoogleAuthService::class, function ($mock) {
-            $mock->shouldReceive('verifyIdToken')
-                ->once()
-                ->andReturn([
-                    'sub' => 'google-user-id',
-                    'name' => 'Test User',
-                    'email' => 'test@example.com',
-                ]);
+            $response = $this->postJson('/api/v1/authentication', [
+                'token' => 'dummy-token',
+            ]);
+
+            expect($response->status())->toBe(200);
+
+            expect($response->headers->has('AccessToken'))->toBeTrue();
+
+            expect(User::where([
+                'provider' => 'google',
+                'uid' => 'google-user-id',
+                'email' => 'test@example.com',
+            ])->exists())->toBeTrue();
         });
 
-        $response = $this->postJson('/api/v1/authentication', [
-            'token' => 'dummy-token',
-        ]);
+        test('returns the existing user when the user already exists', function () {
+            $user = User::factory()->create([
+                'provider' => 'google',
+                'uid' => 'google-user-id',
+                'email' => 'test@example.com',
+                'name' => 'Test User',
+                'nickname' => 'Test User',
+            ]);
 
-        $response->assertOk();
+            $this->mock(GoogleAuthService::class, function ($mock) {
+                $mock->shouldReceive('verifyIdToken')
+                    ->once()
+                    ->andReturn([
+                        'sub' => 'google-user-id',
+                        'name' => 'Test User',
+                        'email' => 'test@example.com',
+                    ]);
+            });
 
-        $response->assertHeader('AccessToken');
+            $response = $this->postJson('/api/v1/authentication', [
+                'token' => 'dummy-token',
+            ]);
 
-        $this->assertDatabaseHas('users', [
-            'provider' => 'google',
-            'uid' => 'google-user-id',
-            'email' => 'test@example.com',
-        ]);
-    }
+            expect($response->status())->toBe(200);
 
-    public function test_returns_existing_user_when_user_already_exists(): void
-    {
-        $user = User::factory()->create([
-            'provider' => 'google',
-            'uid' => 'google-user-id',
-            'email' => 'test@example.com',
-            'name' => 'Test User',
-            'nickname' => 'Test User',
-        ]);
-
-        $this->mock(GoogleAuthService::class, function ($mock) {
-            $mock->shouldReceive('verifyIdToken')
-                ->once()
-                ->andReturn([
-                    'sub' => 'google-user-id',
-                    'name' => 'Test User',
-                    'email' => 'test@example.com',
-                ]);
+            expect(User::count())->toBe(1);
         });
 
-        $response = $this->postJson('/api/v1/authentication', [
-            'token' => 'dummy-token',
-        ]);
+        test('returns 401 when the google token is invalid', function () {
+            $this->mock(GoogleAuthService::class, function ($mock) {
+                $mock->shouldReceive('verifyIdToken')
+                    ->once()
+                    ->andReturn(false);
+            });
 
-        $response->assertOk();
+            $response = $this->postJson('/api/v1/authentication', [
+                'token' => 'invalid-token',
+            ]);
 
-        $this->assertDatabaseCount('users', 1);
-    }
+            expect($response->status())->toBe(401);
 
-    public function test_returns_401_when_google_token_is_invalid(): void
-    {
-        $this->mock(GoogleAuthService::class, function ($mock) {
-            $mock->shouldReceive('verifyIdToken')
-                ->once()
-                ->andReturn(false);
-        });
-
-        $response = $this->postJson('/api/v1/authentication', [
-            'token' => 'invalid-token',
-        ]);
-
-        $response
-            ->assertUnauthorized()
-            ->assertJson([
+            expect($response->json())->toMatchArray([
                 'error' => 'Invalid ID token',
             ]);
-    }
+        });
+    });
 
-    public function test_authenticated_user_can_logout(): void
-    {
-        $user = User::factory()->create();
+    describe('DELETE /api/v1/authentication', function () {
+        test('allows an authenticated user to logout', function () {
+            $user = User::factory()->create();
 
-        Sanctum::actingAs($user);
+            Sanctum::actingAs($user);
 
-        $response = $this->deleteJson('/api/v1/authentication');
+            $response = $this->deleteJson('/api/v1/authentication');
 
-        $response
-            ->assertOk()
-            ->assertJson([
+            expect($response->status())->toBe(200);
+
+            expect($response->json())->toMatchArray([
                 'message' => 'signout successful',
             ]);
-    }
-}
+        });
+    });
+});
