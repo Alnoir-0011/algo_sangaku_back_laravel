@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Shrine extends Model
 {
@@ -21,4 +22,9 @@ class Shrine extends Model
         'latitude' => 'double',
         'longitude' => 'double',
     ];
+
+    public function sangakus(): HasMany
+    {
+        return $this->hasMany(Sangaku::class);
+    }
 }

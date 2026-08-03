@@ -22,8 +22,8 @@ describe('ShrinesController', function () {
             $response = $this->getJson('/api/v1/shrines?searchType=Map&lowLat=35.0&highLat=35.5&lowLng=139.0&highLng=139.5');
 
             expect($response->status())->toBe(200);
-            expect($response->json('data.0.place_id'))->toBe('place-id-1');
-            expect($response->json('data.0.name'))->toBe('八幡神社');
+            expect($response->json('data.0.attributes.place_id'))->toBe('place-id-1');
+            expect($response->json('data.0.attributes.name'))->toBe('八幡神社');
         });
 
         test('returns 200 with empty data when no shrines are found', function () {
@@ -61,7 +61,7 @@ describe('ShrinesController', function () {
 
             expect($response->status())->toBe(200);
             expect(array_is_list($response->json('data')))->toBeTrue();
-            expect($response->json('data.0.place_id'))->toBe('shrine-1');
+            expect($response->json('data.0.attributes.place_id'))->toBe('shrine-1');
         });
 
         test('returns 502 when the Google Places API request fails', function () {
@@ -115,7 +115,10 @@ describe('ShrinesController', function () {
 
             expect($response->status())->toBe(200);
             expect($response->json('data'))->toMatchArray([
-                'id' => $shrine->id,
+                'id' => (string) $shrine->id,
+                'type' => 'shrine',
+            ]);
+            expect($response->json('data.attributes'))->toMatchArray([
                 'name' => $shrine->name,
                 'address' => $shrine->address,
                 'place_id' => $shrine->place_id,
