@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\User;
 
+use App\Enums\Difficulty;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
-class SangakuRequest extends FormRequest
+class SangakuIndexRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,11 +25,9 @@ class SangakuRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'source' => 'required|string|max:255',
-            'difficulty' => 'required|integer|between:1,5',
-            'fixed_inputs' => 'array',
+            'shrine_id' => ['nullable', 'string'],
+            'difficulty' => ['nullable', Rule::in(Difficulty::labels())],
+            'title' => ['nullable', 'string'],
         ];
     }
 }

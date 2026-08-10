@@ -1,7 +1,2 @@
 parameters:
-	ignoreErrors:
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:search\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Http/Controllers/v1/user/SangakusController.php
+	ignoreErrors: []

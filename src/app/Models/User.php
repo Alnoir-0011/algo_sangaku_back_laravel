@@ -25,6 +25,9 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * @return HasMany<Sangaku, $this>
+     */
     public function sangakus(): HasMany
     {
         return $this->hasMany(Sangaku::class);

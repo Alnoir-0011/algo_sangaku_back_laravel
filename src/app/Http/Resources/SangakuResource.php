@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Models\FixedInput;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -16,9 +18,8 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $shrine_id
  * @property-read Carbon|null $created_at
  * @property-read Carbon|null $updated_at
- * @property-read \Illuminate\Database\Eloquent\Collection|\App\Models\FixedInput[] $fixedInputs
+ * @property-read Collection|FixedInput[] $fixedInputs
  */
-
 class SangakuResource extends JsonResource
 {
     /**
@@ -30,7 +31,7 @@ class SangakuResource extends JsonResource
     {
         return [
             'id' => (string) $this->id,
-            'type' => 'shrine',
+            'type' => 'sangaku',
             'attributes' => [
                 'title' => $this->title,
                 'description' => $this->description,

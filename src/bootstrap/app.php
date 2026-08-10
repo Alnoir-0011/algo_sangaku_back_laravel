@@ -2,6 +2,7 @@
 
 use App\Exceptions\ApiExceptionRenderer;
 use App\Exceptions\GooglePlacesApiException;
+use App\Exceptions\InvalidGoogleTokenException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\QueryException;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ValidationException::class,
             AuthenticationException::class,
             AuthorizationException::class,
+            InvalidGoogleTokenException::class,
         ]);
 
         $exceptions->report(function (Throwable $e) {
@@ -62,6 +64,8 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(fn (AuthenticationException $e, Request $request) => ApiExceptionRenderer::render(401, 'Unauthenticated'));
+
+        $exceptions->render(fn (InvalidGoogleTokenException $e, Request $request) => ApiExceptionRenderer::render(401, 'Unauthenticated'));
 
         $exceptions->render(fn (AuthorizationException $e, Request $request) => ApiExceptionRenderer::render(403, 'Forbidden'));
 

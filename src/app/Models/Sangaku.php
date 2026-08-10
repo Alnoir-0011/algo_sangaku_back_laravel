@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use App\Enums\Difficulty;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Builder;
 
 class Sangaku extends Model
 {
@@ -22,9 +22,12 @@ class Sangaku extends Model
         'difficulty',
     ];
 
-    protected $casts = [
-        'difficulty' => Difficulty::class,
-    ];
+    protected function casts(): array
+    {
+        return [
+            'difficulty' => Difficulty::class,
+        ];
+    }
 
     /**
      * @return BelongsTo<User, $this>
@@ -58,12 +61,14 @@ class Sangaku extends Model
 
         $query->distinct();
 
-        if (isset($params['shrine_id'])) {
+        // shrine_id は空文字で「奉納前（未設定）」を表すが、ConvertEmptyStringsToNull により
+        // null で届くため、isset ではなく array_key_exists でキーの有無を見る
+        if (array_key_exists('shrine_id', $params)) {
             if ($params['shrine_id'] === 'any') {
                 $query->whereNotNull('shrine_id');
             } else {
                 $shrineId = filter_var(
-                    $params['shrine_id'],
+                    $params['shrine_id'] ?? '',
                     FILTER_VALIDATE_INT,
                 );
 
@@ -72,7 +77,7 @@ class Sangaku extends Model
         }
 
         if (! empty($params['difficulty'])) {
-            $difficulty = Difficulty::tryFrom($params['difficulty']);
+            $difficulty = Difficulty::fromLabel($params['difficulty']);
 
             if ($difficulty !== null) {
                 $query->where('difficulty', $difficulty);

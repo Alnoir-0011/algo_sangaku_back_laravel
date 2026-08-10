@@ -13,4 +13,23 @@ enum Difficulty: int
     {
         return strtolower($this->name);
     }
+
+    public static function fromLabel(string $label): ?self
+    {
+        foreach (self::cases() as $case) {
+            if ($case->label() === $label) {
+                return $case;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function labels(): array
+    {
+        return array_map(fn (self $difficulty) => $difficulty->label(), self::cases());
+    }
 }

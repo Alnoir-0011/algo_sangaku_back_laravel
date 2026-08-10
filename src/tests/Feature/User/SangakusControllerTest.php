@@ -121,7 +121,7 @@ describe('SangakusController', function () {
 
             $response = $this->postJson('/api/v1/user/sangakus', $params);
 
-            expect($response->status())->toBe(200);
+            expect($response->status())->toBe(201);
             expect(Sangaku::count())->toBe($countBefore + 1);
         });
     });
@@ -204,7 +204,7 @@ describe('SangakusController', function () {
 
             $response = $this->deleteJson("/api/v1/user/sangakus/{$sangaku->id}");
 
-            expect($response->status())->toBe(200);
+            expect($response->status())->toBe(204);
             expect(Sangaku::count())->toBe($countBefore - 1);
         });
 

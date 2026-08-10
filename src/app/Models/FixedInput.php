@@ -15,6 +15,9 @@ class FixedInput extends Model
         'content',
     ];
 
+    /**
+     * @return BelongsTo<Sangaku, $this>
+     */
     public function sangaku(): BelongsTo
     {
         return $this->belongsTo(Sangaku::class);

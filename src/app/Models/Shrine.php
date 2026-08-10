@@ -18,11 +18,17 @@ class Shrine extends Model
         'place_id',
     ];
 
-    protected $casts = [
-        'latitude' => 'double',
-        'longitude' => 'double',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'latitude' => 'double',
+            'longitude' => 'double',
+        ];
+    }
 
+    /**
+     * @return HasMany<Sangaku, $this>
+     */
     public function sangakus(): HasMany
     {
         return $this->hasMany(Sangaku::class);
