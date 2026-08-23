@@ -100,6 +100,18 @@ describe('SangakusController', function () {
             expect($response->json('data'))->toHaveCount(1);
             expect($response->json('data.0.id'))->toBe((string) $sangaku->id);
         });
+
+        test('shrine_idが"any"でも数値でもない場合400を返す', function () {
+            $user = User::factory()->create();
+            Sangaku::factory()->create(['user_id' => $user->id, 'shrine_id' => null]);
+
+            Sanctum::actingAs($user);
+
+            $response = $this->getJson('/api/v1/user/sangakus?shrine_id=foo');
+
+            expect($response->status())->toBe(400);
+            expect($response->json('errors'))->toHaveKey('shrine_id');
+        });
     });
 
     describe('POST /api/v1/user/sangakus', function () {

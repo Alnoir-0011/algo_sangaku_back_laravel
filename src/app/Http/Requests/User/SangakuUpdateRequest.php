@@ -27,11 +27,11 @@ class SangakuUpdateRequest extends FormRequest
         return [
             'sangaku' => ['required', 'array'],
             'sangaku.title' => ['sometimes', 'string', 'max:255'],
-            'sangaku.description' => ['sometimes', 'string'],
-            'sangaku.source' => ['sometimes', 'string'],
+            'sangaku.description' => ['sometimes', 'string', 'max:65535'],
+            'sangaku.source' => ['sometimes', 'string', 'max:65535'],
             'sangaku.difficulty' => ['sometimes', Rule::enum(Difficulty::class)],
-            'fixed_inputs' => ['sometimes', 'array'],
-            'fixed_inputs.*' => ['string'],
+            'fixed_inputs' => ['sometimes', 'array', 'max:50'],
+            'fixed_inputs.*' => ['required', 'string', 'max:65535', 'distinct'],
         ];
     }
 }

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\V1\User;
 
 use App\Http\Controllers\V1\BaseController;
-use App\Http\Requests\User\SangakuIndexRequest;
+use App\Http\Requests\SangakuIndexRequest;
 use App\Http\Requests\User\SangakuStoreRequest;
 use App\Http\Requests\User\SangakuUpdateRequest;
 use App\Http\Resources\SangakuResource;
@@ -15,14 +15,18 @@ class SangakusController extends BaseController
 {
     public function index(SangakuIndexRequest $request)
     {
-        $sangakus = $request->user()->sangakus()->search($request->validated())->with(['fixedInputs'])->paginate(10);
+        $sangakus = $request->user()->sangakus()
+            ->search($request->validated())
+            ->with(['user', 'fixedInputs', 'shrine'])
+            ->orderBy('id')
+            ->paginate(config('sangaku.per_page'));
 
         return SangakuResource::collection($sangakus);
     }
 
     public function show(Request $request, int $id)
     {
-        $sangaku = $request->user()->sangakus()->with(['fixedInputs'])->findOrFail($id);
+        $sangaku = $request->user()->sangakus()->with(['user', 'fixedInputs', 'shrine'])->findOrFail($id);
 
         return new SangakuResource($sangaku);
     }
@@ -38,6 +42,8 @@ class SangakusController extends BaseController
 
             return $sangaku;
         });
+
+        $sangaku->load(['user', 'fixedInputs', 'shrine']);
 
         return new SangakuResource($sangaku);
     }
@@ -56,6 +62,9 @@ class SangakusController extends BaseController
                 $this->createFixedInputs($sangaku, $validated['fixed_inputs']);
             }
         });
+
+        // fixedInputs は洗い替え済みのため、古いリレーションを持ち越さないよう読み直す
+        $sangaku->load(['user', 'fixedInputs', 'shrine']);
 
         return new SangakuResource($sangaku);
     }

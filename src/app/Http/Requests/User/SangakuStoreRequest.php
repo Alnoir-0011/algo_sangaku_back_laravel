@@ -27,11 +27,11 @@ class SangakuStoreRequest extends FormRequest
         return [
             'sangaku' => ['required', 'array'],
             'sangaku.title' => ['required', 'string', 'max:255'],
-            'sangaku.description' => ['required', 'string'],
-            'sangaku.source' => ['required', 'string'],
+            'sangaku.description' => ['required', 'string', 'max:65535'],
+            'sangaku.source' => ['required', 'string', 'max:65535'],
             'sangaku.difficulty' => ['required', Rule::enum(Difficulty::class)],
-            'fixed_inputs' => ['sometimes', 'array'],
-            'fixed_inputs.*' => ['string'],
+            'fixed_inputs' => ['sometimes', 'array', 'max:50'],
+            'fixed_inputs.*' => ['required', 'string', 'max:65535', 'distinct'],
         ];
     }
 }
