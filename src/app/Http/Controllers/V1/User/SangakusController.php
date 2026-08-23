@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\V1\User;
 
 use App\Http\Controllers\V1\BaseController;
-use App\Http\Requests\SangakuIndexRequest;
+use App\Http\Requests\User\SangakuIndexRequest;
 use App\Http\Requests\User\SangakuStoreRequest;
 use App\Http\Requests\User\SangakuUpdateRequest;
 use App\Http\Resources\SangakuResource;
@@ -17,16 +17,20 @@ class SangakusController extends BaseController
     {
         $sangakus = $request->user()->sangakus()
             ->search($request->validated())
-            ->with(['user', 'fixedInputs', 'shrine'])
+            ->with(['fixedInputs', 'shrine'])
             ->orderBy('id')
             ->paginate(config('sangaku.per_page'));
+
+        // user は常に認証ユーザー自身なので、eager load せず手元のインスタンスを渡す
+        $sangakus->getCollection()->each->setRelation('user', $request->user());
 
         return SangakuResource::collection($sangakus);
     }
 
     public function show(Request $request, int $id)
     {
-        $sangaku = $request->user()->sangakus()->with(['user', 'fixedInputs', 'shrine'])->findOrFail($id);
+        $sangaku = $request->user()->sangakus()->with(['fixedInputs', 'shrine'])->findOrFail($id);
+        $sangaku->setRelation('user', $request->user());
 
         return new SangakuResource($sangaku);
     }
@@ -43,7 +47,8 @@ class SangakusController extends BaseController
             return $sangaku;
         });
 
-        $sangaku->load(['user', 'fixedInputs', 'shrine']);
+        $sangaku->load(['fixedInputs', 'shrine']);
+        $sangaku->setRelation('user', $request->user());
 
         return new SangakuResource($sangaku);
     }
@@ -55,7 +60,7 @@ class SangakusController extends BaseController
         $validated = $request->validated();
 
         DB::transaction(function () use ($sangaku, $validated) {
-            $sangaku->update($validated['sangaku']);
+            $sangaku->update($validated['sangaku'] ?? []);
 
             if (array_key_exists('fixed_inputs', $validated)) {
                 $sangaku->fixedInputs()->delete();
@@ -64,7 +69,8 @@ class SangakusController extends BaseController
         });
 
         // fixedInputs は洗い替え済みのため、古いリレーションを持ち越さないよう読み直す
-        $sangaku->load(['user', 'fixedInputs', 'shrine']);
+        $sangaku->load(['fixedInputs', 'shrine']);
+        $sangaku->setRelation('user', $request->user());
 
         return new SangakuResource($sangaku);
     }

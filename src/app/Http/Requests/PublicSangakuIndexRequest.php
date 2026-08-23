@@ -34,6 +34,8 @@ class PublicSangakuIndexRequest extends FormRequest
         return [
             'difficulty' => ['nullable', Rule::in(Difficulty::labels())],
             'title' => ['nullable', 'string', 'max:100'],
+            // 巨大な OFFSET を伴うページ送りを防ぐ
+            'page' => ['nullable', 'integer', 'min:1', 'max:1000'],
         ];
     }
 }

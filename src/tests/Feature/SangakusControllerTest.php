@@ -37,5 +37,11 @@ describe('SangakusController', function () {
 
             expect($response->status())->toBe(404);
         });
+
+        test('bigintに収まらないIDでも500にならず404を返す', function () {
+            $response = $this->getJson('/api/v1/sangakus/99999999999999999999');
+
+            expect($response->status())->toBe(404);
+        });
     });
 });

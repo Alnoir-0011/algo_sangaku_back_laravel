@@ -12,9 +12,12 @@ class ShrineSangakusController extends BaseController
     {
         $sangakus = $shrine->sangakus()
             ->search($request->validated())
-            ->with(['user', 'fixedInputs', 'shrine'])
+            ->with(['user', 'fixedInputs'])
             ->orderBy('id')
             ->paginate(config('sangaku.per_page'));
+
+        // 全件がこの神社に紐づくため、shrine は eager load せず手元のインスタンスを渡す
+        $sangakus->getCollection()->each->setRelation('shrine', $shrine);
 
         return PublicSangakuResource::collection($sangakus);
     }

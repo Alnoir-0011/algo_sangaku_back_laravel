@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\User;
 
 use App\Enums\Difficulty;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -30,6 +30,8 @@ class SangakuIndexRequest extends FormRequest
             'shrine_id' => ['nullable', 'string', 'regex:/^(any|\d+)$/'],
             'difficulty' => ['nullable', Rule::in(Difficulty::labels())],
             'title' => ['nullable', 'string', 'max:100'],
+            // 巨大な OFFSET を伴うページ送りを防ぐ
+            'page' => ['nullable', 'integer', 'min:1', 'max:1000'],
         ];
     }
 }

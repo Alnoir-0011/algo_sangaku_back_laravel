@@ -19,10 +19,11 @@ class Sangaku extends Model
      */
     private const MAX_SEARCH_WORDS = 5;
 
-    // shrine_id は奉納（DedicateController）の位置検証を通したうえで明示代入する。
-    // mass assignment で設定できると検証を迂回できてしまうため、意図的に含めない。
+    // user_id / shrine_id は mass assignment の対象にしない。
+    // user_id はリレーション経由の作成（$user->sangakus()->create(...)）で自動設定され、
+    // shrine_id は奉納（DedicateController）の位置検証を通したうえで明示代入するため、
+    // ここに含めると検証や所有者スコープを迂回する経路を作ってしまう。
     protected $fillable = [
-        'user_id',
         'title',
         'description',
         'source',
@@ -57,7 +58,8 @@ class Sangaku extends Model
      */
     public function fixedInputs(): HasMany
     {
-        return $this->hasMany(FixedInput::class);
+        // 固定入力は提示順に意味があるため、常に登録順で取得する
+        return $this->hasMany(FixedInput::class)->orderBy('id');
     }
 
     /**
@@ -106,7 +108,8 @@ class Sangaku extends Model
                     FILTER_VALIDATE_INT,
                 );
 
-                $query->where('shrine_id', $shrineId ?: null);
+                // filter_var は不正値・bigint 範囲外で false を返す。0 は有効な整数として扱う
+                $query->where('shrine_id', $shrineId !== false ? $shrineId : null);
             }
         }
 
@@ -119,8 +122,9 @@ class Sangaku extends Model
         }
 
         if (! empty($params['title'])) {
+            // 不正な UTF-8 バイト列に対して preg_split は false を返すため、空配列に倒す
             $words = array_slice(
-                preg_split('/\s+/u', trim($params['title'])),
+                preg_split('/\s+/u', trim($params['title'])) ?: [],
                 0,
                 self::MAX_SEARCH_WORDS
             );

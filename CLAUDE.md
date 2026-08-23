@@ -60,4 +60,6 @@ CI (`.github/workflows/ci.yml`) は `main` への PR ごとに 2 つのジョブ
 
 **API Resource**: 算額には 2 つの形があり、どちらを使うかはスタイルの好みではなくドメイン上のルールである。`SangakuResource` は `attributes.source` を保存されているまま返し、`V1\User` 配下の所有者スコープのエンドポイント (`SangakusController`、`DedicateController`) でのみ使う。`PublicSangakuResource` は `attributes.source` が `null` 固定である点を除いて同一で、未認証のエンドポイント (`V1\SangakusController`、`V1\ShrineSangakusController`) が使う。`source` はレコードを所有していない相手には伏せるため、新しく公開エンドポイントを追加する場合も必ずこちらを使うこと。なおキー自体は省略されず、値が `null` で存在する点に注意。両者とも JSON:API 風の `{id, type, attributes, relationships}` の形を返し、まだ奉納されていない算額では `relationships.shrine.data` が `null` になる。
 
+**デプロイ時の注意**: `bootstrap/app.php` はデバッグ時のみ例外メッセージをレスポンスに載せる。`APP_DEBUG=true` のままだと SQL 全文・DB ホスト名・DB 名まで露出するため、本番環境では `APP_ENV=production` / `APP_DEBUG=false` を必ず確認する（`src/.env.example` はローカル開発向けに `APP_DEBUG=true` のまま）。
+
 **Enum**: backed enum (`Difficulty: int`、`Role: int`) は、生の int として手作業で扱うのではなく、`casts(): array` メソッドで Eloquent モデルに直接キャストする（統一されており、`protected $casts` プロパティを使っているモデルは 1 つもない）。`Difficulty` はさらに `label()` / `fromLabel()` / `labels()` を公開しており、API が難易度を名前で受け取り検証するのはこの仕組みによる（書き込みは `Rule::enum()`、検索フィルタは `Rule::in(Difficulty::labels())`）。

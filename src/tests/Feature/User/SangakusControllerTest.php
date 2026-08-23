@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\FixedInput;
 use App\Models\Sangaku;
 use App\Models\Shrine;
 use App\Models\User;
@@ -101,6 +102,18 @@ describe('SangakusController', function () {
             expect($response->json('data.0.id'))->toBe((string) $sangaku->id);
         });
 
+        test('titleが不正なUTF-8バイト列でも500にならない', function () {
+            $user = User::factory()->create();
+            Sangaku::factory()->create(['user_id' => $user->id]);
+
+            Sanctum::actingAs($user);
+
+            // "\xC3\x28" は UTF-8 として不正な並び。preg_split('/\s+/u') が false を返す
+            $response = $this->getJson('/api/v1/user/sangakus?title=%C3%28');
+
+            expect($response->status())->toBe(200);
+        });
+
         test('shrine_idが"any"でも数値でもない場合400を返す', function () {
             $user = User::factory()->create();
             Sangaku::factory()->create(['user_id' => $user->id, 'shrine_id' => null]);
@@ -135,6 +148,123 @@ describe('SangakusController', function () {
 
             expect($response->status())->toBe(201);
             expect(Sangaku::count())->toBe($countBefore + 1);
+        });
+
+        test('fixed_inputsが内容と順序を保ったまま保存される', function () {
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            $params = [
+                'sangaku' => [
+                    'title' => 'test_title',
+                    'description' => 'test_description',
+                    'source' => "puts 'Hello world'",
+                    'difficulty' => 0,
+                ],
+                'fixed_inputs' => ['first', 'second', 'third'],
+            ];
+
+            $response = $this->postJson('/api/v1/user/sangakus', $params);
+
+            expect($response->status())->toBe(201);
+
+            $sangaku = Sangaku::latest('id')->first();
+            expect($sangaku->fixedInputs->pluck('content')->all())->toBe(['first', 'second', 'third']);
+            expect(array_column($response->json('data.attributes.inputs'), 'content'))
+                ->toBe(['first', 'second', 'third']);
+        });
+
+        test('titleが未指定の場合400を返し、作成されない', function () {
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            $countBefore = Sangaku::count();
+
+            $response = $this->postJson('/api/v1/user/sangakus', [
+                'sangaku' => [
+                    'description' => 'test_description',
+                    'source' => "puts 'Hello world'",
+                    'difficulty' => 0,
+                ],
+            ]);
+
+            expect($response->status())->toBe(400);
+            expect($response->json('errors'))->toHaveKey('sangaku.title');
+            expect(Sangaku::count())->toBe($countBefore);
+        });
+
+        test('difficultyがEnumの範囲外の場合400を返す', function () {
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            $response = $this->postJson('/api/v1/user/sangakus', [
+                'sangaku' => [
+                    'title' => 'test_title',
+                    'description' => 'test_description',
+                    'source' => "puts 'Hello world'",
+                    'difficulty' => 99,
+                ],
+            ]);
+
+            expect($response->status())->toBe(400);
+            expect($response->json('errors'))->toHaveKey('sangaku.difficulty');
+        });
+
+        test('fixed_inputsに重複した値がある場合400を返す', function () {
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            $response = $this->postJson('/api/v1/user/sangakus', [
+                'sangaku' => [
+                    'title' => 'test_title',
+                    'description' => 'test_description',
+                    'source' => "puts 'Hello world'",
+                    'difficulty' => 0,
+                ],
+                'fixed_inputs' => ['same', 'same'],
+            ]);
+
+            expect($response->status())->toBe(400);
+            expect($response->json('errors'))->toHaveKey('fixed_inputs.0');
+        });
+
+        test('fixed_inputsが51件以上の場合400を返す', function () {
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            $response = $this->postJson('/api/v1/user/sangakus', [
+                'sangaku' => [
+                    'title' => 'test_title',
+                    'description' => 'test_description',
+                    'source' => "puts 'Hello world'",
+                    'difficulty' => 0,
+                ],
+                'fixed_inputs' => array_map(fn (int $i) => "input_{$i}", range(1, 51)),
+            ]);
+
+            expect($response->status())->toBe(400);
+            expect($response->json('errors'))->toHaveKey('fixed_inputs');
+        });
+
+        test('fixed_inputsがカラム長（255文字）を超える場合、500ではなく400を返す', function () {
+            $user = User::factory()->create();
+            Sanctum::actingAs($user);
+
+            $countBefore = Sangaku::count();
+
+            $response = $this->postJson('/api/v1/user/sangakus', [
+                'sangaku' => [
+                    'title' => 'test_title',
+                    'description' => 'test_description',
+                    'source' => "puts 'Hello world'",
+                    'difficulty' => 0,
+                ],
+                'fixed_inputs' => [str_repeat('a', 256)],
+            ]);
+
+            expect($response->status())->toBe(400);
+            expect($response->json('errors'))->toHaveKey('fixed_inputs.0');
+            expect(Sangaku::count())->toBe($countBefore);
         });
     });
 
@@ -173,6 +303,42 @@ describe('SangakusController', function () {
 
             expect($response->status())->toBe(200);
             expect($response->json('data.attributes.title'))->toBe('changed_title');
+        });
+
+        test('fixed_inputsが洗い替えされ、古い値が残らない', function () {
+            $user = User::factory()->create();
+            $sangaku = Sangaku::factory()->create(['user_id' => $user->id]);
+            $sangaku->fixedInputs()->createMany([
+                ['content' => 'old_1'],
+                ['content' => 'old_2'],
+            ]);
+
+            Sanctum::actingAs($user);
+
+            $response = $this->patchJson("/api/v1/user/sangakus/{$sangaku->id}", [
+                'sangaku' => ['title' => 'changed_title'],
+                'fixed_inputs' => ['new_1', 'new_2', 'new_3'],
+            ]);
+
+            expect($response->status())->toBe(200);
+            expect($sangaku->fixedInputs()->pluck('content')->all())->toBe(['new_1', 'new_2', 'new_3']);
+            expect(FixedInput::where('sangaku_id', $sangaku->id)->count())->toBe(3);
+            expect(array_column($response->json('data.attributes.inputs'), 'content'))
+                ->toBe(['new_1', 'new_2', 'new_3']);
+        });
+
+        test('sangakuに未知のキーしか含まない場合、500ではなく400を返す', function () {
+            $user = User::factory()->create();
+            $sangaku = Sangaku::factory()->create(['user_id' => $user->id, 'title' => 'before_changed']);
+
+            Sanctum::actingAs($user);
+
+            $response = $this->patchJson("/api/v1/user/sangakus/{$sangaku->id}", [
+                'sangaku' => ['unknown_key' => 'value'],
+            ]);
+
+            expect($response->status())->toBe(400);
+            expect($sangaku->fresh()->title)->toBe('before_changed');
         });
 
         test('存在しないidの場合404を返す', function () {

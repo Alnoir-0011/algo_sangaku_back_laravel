@@ -28,6 +28,15 @@ class AuthenticationController extends BaseController
             throw new InvalidGoogleTokenException;
         }
 
+        // name / email は users テーブルで NOT NULL。openid のみのスコープで発行された
+        // ID トークンには含まれないため、欠けている場合は不正なトークンとして扱う
+        // （そのまま参照すると未定義キーや NOT NULL 違反で 500 になる）。
+        if (! isset($payload['sub'], $payload['name'], $payload['email'])) {
+            throw new InvalidGoogleTokenException;
+        }
+
+        // email_verified が false のアドレスも保存はするが、ユーザーの同定は
+        // provider + uid（sub）で行っている。email を信頼の判断材料に使わないこと。
         $user = User::firstOrCreate(
             ['provider' => 'google', 'uid' => $payload['sub']],
             [

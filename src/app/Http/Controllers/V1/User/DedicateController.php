@@ -9,6 +9,8 @@ use App\Models\Shrine;
 
 class DedicateController extends BaseController
 {
+    private const ALREADY_DEDICATED_MESSAGE = 'この算額は既に奉納されています';
+
     public function __invoke(SangakuDedicateRequest $request, int $sangakuId)
     {
         $validated = $request->validated();
@@ -18,7 +20,7 @@ class DedicateController extends BaseController
 
         // 既に奉納済みであることは、座標が遠いことより優先して伝える。
         if ($sangaku->isDedicated()) {
-            return $this->render409('この算額は既に奉納されています');
+            return $this->render409(self::ALREADY_DEDICATED_MESSAGE);
         }
 
         if (! $shrine->isWithinDedicateRange((float) $validated['lat'], (float) $validated['lng'])) {
@@ -27,7 +29,7 @@ class DedicateController extends BaseController
 
         // ここで false になるのは、上の判定後に別リクエストが先に奉納を終えた場合。
         if (! $sangaku->dedicateTo($shrine)) {
-            return $this->render409('この算額は既に奉納されています');
+            return $this->render409(self::ALREADY_DEDICATED_MESSAGE);
         }
 
         $sangaku->refresh()->load(['user', 'fixedInputs', 'shrine']);
