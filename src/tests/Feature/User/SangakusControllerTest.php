@@ -305,7 +305,7 @@ describe('SangakusController', function () {
             expect($response->json('data.attributes.title'))->toBe('changed_title');
         });
 
-        test('fixed_inputsが洗い替えされ、古い値が残らない', function () {
+        test('共通する値がない場合、古い値がすべて消えて新しい値だけが残る', function () {
             $user = User::factory()->create();
             $sangaku = Sangaku::factory()->create(['user_id' => $user->id]);
             $sangaku->fixedInputs()->createMany([
@@ -325,6 +325,130 @@ describe('SangakusController', function () {
             expect(FixedInput::where('sangaku_id', $sangaku->id)->count())->toBe(3);
             expect(array_column($response->json('data.attributes.inputs'), 'content'))
                 ->toBe(['new_1', 'new_2', 'new_3']);
+        });
+
+        test('保存済みと同じfixed_inputsを渡した場合、idもupdated_atも変化しない', function () {
+            $user = User::factory()->create();
+            $sangaku = Sangaku::factory()->create(['user_id' => $user->id]);
+            $sangaku->fixedInputs()->createMany([
+                ['content' => 'keep_1'],
+                ['content' => 'keep_2'],
+            ]);
+            // 洗い替えされた場合に updated_at の差分が確実に出るよう、過去日時に倒しておく
+            FixedInput::where('sangaku_id', $sangaku->id)->update(['updated_at' => now()->subDay()]);
+
+            $before = FixedInput::where('sangaku_id', $sangaku->id)
+                ->orderBy('id')
+                ->get(['id', 'content', 'updated_at']);
+
+            Sanctum::actingAs($user);
+
+            $response = $this->patchJson("/api/v1/user/sangakus/{$sangaku->id}", [
+                'sangaku' => ['title' => 'changed_title'],
+                'fixed_inputs' => ['keep_1', 'keep_2'],
+            ]);
+
+            expect($response->status())->toBe(200);
+
+            $after = FixedInput::where('sangaku_id', $sangaku->id)
+                ->orderBy('id')
+                ->get(['id', 'content', 'updated_at']);
+
+            expect($after->pluck('id')->all())->toBe($before->pluck('id')->all());
+            expect($after->pluck('content')->all())->toBe(['keep_1', 'keep_2']);
+            expect($after->pluck('updated_at')->map->toDateTimeString()->all())
+                ->toBe($before->pluck('updated_at')->map->toDateTimeString()->all());
+            expect(array_column($response->json('data.attributes.inputs'), 'id'))
+                ->toBe($before->pluck('id')->all());
+        });
+
+        test('一部だけ変更した場合、共通する行のidが保たれ、増減した分だけが反映される', function () {
+            $user = User::factory()->create();
+            $sangaku = Sangaku::factory()->create(['user_id' => $user->id]);
+            $sangaku->fixedInputs()->createMany([
+                ['content' => 'keep'],
+                ['content' => 'removed'],
+            ]);
+
+            $keptId = FixedInput::where('sangaku_id', $sangaku->id)->where('content', 'keep')->value('id');
+            $removedId = FixedInput::where('sangaku_id', $sangaku->id)->where('content', 'removed')->value('id');
+
+            Sanctum::actingAs($user);
+
+            $response = $this->patchJson("/api/v1/user/sangakus/{$sangaku->id}", [
+                'sangaku' => ['title' => 'changed_title'],
+                'fixed_inputs' => ['keep', 'added'],
+            ]);
+
+            expect($response->status())->toBe(200);
+            expect($sangaku->fixedInputs()->pluck('content')->all())->toBe(['keep', 'added']);
+            expect(FixedInput::where('sangaku_id', $sangaku->id)->where('content', 'keep')->value('id'))
+                ->toBe($keptId);
+            expect(FixedInput::find($removedId))->toBeNull();
+            expect(FixedInput::where('sangaku_id', $sangaku->id)->where('content', 'added')->value('id'))
+                ->toBeGreaterThan($removedId);
+        });
+
+        test('fixed_inputsに空配列を渡した場合、すべて削除される', function () {
+            $user = User::factory()->create();
+            $sangaku = Sangaku::factory()->create(['user_id' => $user->id]);
+            $sangaku->fixedInputs()->createMany([
+                ['content' => 'old_1'],
+                ['content' => 'old_2'],
+            ]);
+
+            Sanctum::actingAs($user);
+
+            $response = $this->patchJson("/api/v1/user/sangakus/{$sangaku->id}", [
+                'sangaku' => ['title' => 'changed_title'],
+                'fixed_inputs' => [],
+            ]);
+
+            expect($response->status())->toBe(200);
+            expect(FixedInput::where('sangaku_id', $sangaku->id)->count())->toBe(0);
+            expect($response->json('data.attributes.inputs'))->toBe([]);
+        });
+
+        test('fixed_inputsを送らない場合、既存の値がそのまま保持される', function () {
+            $user = User::factory()->create();
+            $sangaku = Sangaku::factory()->create(['user_id' => $user->id]);
+            $sangaku->fixedInputs()->createMany([
+                ['content' => 'keep_1'],
+                ['content' => 'keep_2'],
+            ]);
+
+            Sanctum::actingAs($user);
+
+            $response = $this->patchJson("/api/v1/user/sangakus/{$sangaku->id}", [
+                'sangaku' => ['title' => 'changed_title'],
+            ]);
+
+            expect($response->status())->toBe(200);
+            expect($sangaku->fixedInputs()->pluck('content')->all())->toBe(['keep_1', 'keep_2']);
+        });
+
+        test('並び替えただけのfixed_inputsを渡した場合、idは保たれ、順序はリクエスト順に追従しない', function () {
+            $user = User::factory()->create();
+            $sangaku = Sangaku::factory()->create(['user_id' => $user->id]);
+            $sangaku->fixedInputs()->createMany([
+                ['content' => 'a'],
+                ['content' => 'b'],
+            ]);
+
+            $idsBefore = FixedInput::where('sangaku_id', $sangaku->id)->orderBy('id')->pluck('id')->all();
+
+            Sanctum::actingAs($user);
+
+            $response = $this->patchJson("/api/v1/user/sangakus/{$sangaku->id}", [
+                'sangaku' => ['title' => 'changed_title'],
+                'fixed_inputs' => ['b', 'a'],
+            ]);
+
+            expect($response->status())->toBe(200);
+            expect(FixedInput::where('sangaku_id', $sangaku->id)->orderBy('id')->pluck('id')->all())
+                ->toBe($idsBefore);
+            // 差分同期では並び順を保持しないため、id 順のまま返る
+            expect(array_column($response->json('data.attributes.inputs'), 'content'))->toBe(['a', 'b']);
         });
 
         test('sangakuに未知のキーしか含まない場合、500ではなく400を返す', function () {

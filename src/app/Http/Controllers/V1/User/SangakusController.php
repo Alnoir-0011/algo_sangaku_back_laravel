@@ -63,12 +63,11 @@ class SangakusController extends BaseController
             $sangaku->update($validated['sangaku'] ?? []);
 
             if (array_key_exists('fixed_inputs', $validated)) {
-                $sangaku->fixedInputs()->delete();
-                $this->createFixedInputs($sangaku, $validated['fixed_inputs']);
+                $this->syncFixedInputs($sangaku, $validated['fixed_inputs']);
             }
         });
 
-        // fixedInputs は洗い替え済みのため、古いリレーションを持ち越さないよう読み直す
+        // fixedInputs は差分同期で増減しているため、古いリレーションを持ち越さないよう読み直す
         $sangaku->load(['fixedInputs', 'shrine']);
         $sangaku->setRelation('user', $request->user());
 
@@ -88,8 +87,34 @@ class SangakusController extends BaseController
      */
     private function createFixedInputs(Sangaku $sangaku, array $contents): void
     {
+        if ($contents === []) {
+            return;
+        }
+
         $sangaku->fixedInputs()->createMany(
             array_map(fn (string $content) => ['content' => $content], $contents)
         );
+    }
+
+    /**
+     * content をキーに差分だけを反映する。
+     *
+     * 内容が変わっていない行は id と updated_at をそのまま保つため、全件を
+     * 洗い替えせず、消えた content だけを削除し、増えた content だけを作成する。
+     * その代わり並び順は id 順のままなので、content の並び替えだけを送っても
+     * レスポンスの順序はリクエスト順には追従しない。
+     *
+     * @param  array<int, string>  $contents  リクエスト内で重複しない content の配列（distinct ルールで担保）
+     */
+    private function syncFixedInputs(Sangaku $sangaku, array $contents): void
+    {
+        $existing = $sangaku->fixedInputs()->pluck('content')->all();
+
+        $removed = array_values(array_diff($existing, $contents));
+        if ($removed !== []) {
+            $sangaku->fixedInputs()->whereIn('content', $removed)->delete();
+        }
+
+        $this->createFixedInputs($sangaku, array_values(array_diff($contents, $existing)));
     }
 }
