@@ -1,18 +1,21 @@
 <?php
 
-namespace App\Http\Controllers\v1;
+namespace App\Http\Controllers\V1;
 
-use App\Http\Controllers\Controller;
 use App\Http\Requests\ShrineSearchRequest;
 use App\Http\Resources\ShrineResource;
 use App\Models\Shrine;
 use App\Services\PlaceApiService;
 
-class ShrinesController extends Controller
+class ShrinesController extends BaseController
 {
+    public function __construct(
+        private PlaceApiService $placeApiService
+    ) {}
+
     public function index(ShrineSearchRequest $request)
     {
-        $shrines = PlaceApiService::searchByBounds(
+        $shrines = $this->placeApiService->searchByBounds(
             (float) $request->input('lowLat'),
             (float) $request->input('highLat'),
             (float) $request->input('lowLng'),

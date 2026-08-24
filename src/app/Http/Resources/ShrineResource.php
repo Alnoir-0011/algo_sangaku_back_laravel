@@ -26,14 +26,17 @@ class ShrineResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'address' => $this->address,
-            'latitude' => $this->latitude,
-            'longitude' => $this->longitude,
-            'place_id' => $this->place_id,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'id' => (string) $this->id,
+            'type' => 'shrine',
+            'attributes' => [
+                'name' => $this->name,
+                'address' => $this->address,
+                'latitude' => $this->latitude,
+                'longitude' => $this->longitude,
+                'place_id' => $this->place_id,
+            ],
+            'relationships' => [
+            ],
         ];
     }
 }

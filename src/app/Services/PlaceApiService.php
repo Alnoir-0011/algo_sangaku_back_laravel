@@ -15,14 +15,14 @@ class PlaceApiService
 
     private const ELIMINATE_KEYWORDS = ['寺', '手水舎', '社務所', '授与所', '鳥居'];
 
-    public static function searchByBounds(float $lowLat, float $highLat, float $lowLng, float $highLng): array
+    public function searchByBounds(float $lowLat, float $highLat, float $lowLng, float $highLng): array
     {
-        $searchResults = self::textSearchByLocationRestriction($lowLat, $highLat, $lowLng, $highLng);
+        $searchResults = $this->textSearchByLocationRestriction($lowLat, $highLat, $lowLng, $highLng);
 
-        return self::persistPlaces($searchResults);
+        return $this->persistPlaces($searchResults);
     }
 
-    private static function headers(): array
+    private function headers(): array
     {
         return [
             'Content-Type' => 'application/json',
@@ -31,7 +31,7 @@ class PlaceApiService
         ];
     }
 
-    private static function textSearchByLocationRestriction(float $lowLat, float $highLat, float $lowLng, float $highLng): array
+    private function textSearchByLocationRestriction(float $lowLat, float $highLat, float $lowLng, float $highLng): array
     {
         $params = [
             'textQuery' => '神社 -寺',
@@ -53,14 +53,14 @@ class PlaceApiService
             'rankPreference' => 'DISTANCE',
         ];
 
-        return self::performSearchTextRequest($params);
+        return $this->performSearchTextRequest($params);
     }
 
-    private static function performSearchTextRequest(array $params): array
+    private function performSearchTextRequest(array $params): array
     {
         $response = Http::connectTimeout(3)
             ->timeout(10)
-            ->withHeaders(self::headers())
+            ->withHeaders($this->headers())
             ->post(self::GOOGLE_PLACE_SEARCH_TEXT_URI, $params);
 
         if (! $response->successful()) {
@@ -72,13 +72,13 @@ class PlaceApiService
             throw new GooglePlacesApiException;
         }
 
-        return self::eliminateNonShrine($response->json()['places'] ?? []);
+        return $this->eliminateNonShrine($response->json()['places'] ?? []);
     }
 
-    private static function persistPlaces(array $filteredPlaces): array
+    private function persistPlaces(array $filteredPlaces): array
     {
         $shrines = array_map(function (array $place) {
-            if (! self::validatePlace($place)) {
+            if (! $this->validatePlace($place)) {
                 Log::warning('Skipped invalid place data from Google Places API', ['place' => $place]);
 
                 return null;
@@ -98,7 +98,7 @@ class PlaceApiService
         return array_values(array_filter($shrines));
     }
 
-    private static function validatePlace(array $place): bool
+    private function validatePlace(array $place): bool
     {
         $validator = Validator::make($place, [
             'id' => 'required|string|max:255',
@@ -111,7 +111,7 @@ class PlaceApiService
         return $validator->passes();
     }
 
-    private static function eliminateNonShrine(array $places): array
+    private function eliminateNonShrine(array $places): array
     {
         return array_values(array_filter($places, function (array $place) {
             foreach (self::ELIMINATE_KEYWORDS as $keyword) {

@@ -30,7 +30,7 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('place-id-1', '八幡神社', '東京都千代田区1-1', 35.6895, 139.6917),
             ]);
 
-            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
+            app(PlaceApiService::class)->searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             $shrine = Shrine::where('place_id', 'place-id-1')->first();
 
@@ -54,7 +54,7 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('place-id-1', '八幡神社', '更新後の住所', 35.0, 139.0),
             ]);
 
-            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
+            app(PlaceApiService::class)->searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             expect(Shrine::where('place_id', 'place-id-1')->count())->toBe(1);
 
@@ -70,7 +70,7 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('excluded-place', "テスト{$keyword}"),
             ]);
 
-            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
+            app(PlaceApiService::class)->searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             expect(Shrine::where('place_id', 'excluded-place')->exists())->toBeFalse();
         })->with(['寺', '手水舎', '社務所', '授与所', '鳥居']);
@@ -81,7 +81,7 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('temple-1', '○○寺'),
             ]);
 
-            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
+            app(PlaceApiService::class)->searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             expect(Shrine::where('place_id', 'shrine-1')->exists())->toBeTrue();
             expect(Shrine::where('place_id', 'temple-1')->exists())->toBeFalse();
@@ -93,7 +93,7 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('shrine-1', '八幡神社'),
             ]);
 
-            $result = PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
+            $result = app(PlaceApiService::class)->searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             expect(array_is_list($result))->toBeTrue();
             expect($result)->toHaveCount(1);
@@ -113,7 +113,7 @@ describe('PlaceApiService::searchByBounds', function () {
                 shrinePlace('shrine-1', '八幡神社'),
             ]);
 
-            $result = PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
+            $result = app(PlaceApiService::class)->searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             expect(array_is_list($result))->toBeTrue();
             expect($result)->toHaveCount(1);
@@ -126,7 +126,7 @@ describe('PlaceApiService::searchByBounds', function () {
         test('throws a GooglePlacesApiException and persists nothing', function () {
             fakeGooglePlacesSearch([], 400);
 
-            expect(fn () => PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0))
+            expect(fn () => app(PlaceApiService::class)->searchByBounds(35.0, 36.0, 139.0, 140.0))
                 ->toThrow(GooglePlacesApiException::class, 'Google Places API request failed');
 
             expect(Shrine::count())->toBe(0);
@@ -139,7 +139,7 @@ describe('PlaceApiService::searchByBounds', function () {
 
             fakeGooglePlacesSearch([]);
 
-            PlaceApiService::searchByBounds(35.0, 36.0, 139.0, 140.0);
+            app(PlaceApiService::class)->searchByBounds(35.0, 36.0, 139.0, 140.0);
 
             Http::assertSent(function (Request $request) {
                 return $request->url() === 'https://places.googleapis.com/v1/places:searchText'

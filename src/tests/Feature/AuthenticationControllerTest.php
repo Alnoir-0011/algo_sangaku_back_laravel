@@ -74,7 +74,7 @@ describe('AuthenticationController', function () {
             expect($response->status())->toBe(401);
 
             expect($response->json())->toMatchArray([
-                'error' => 'Invalid ID token',
+                'message' => 'Unauthenticated',
             ]);
         });
     });
@@ -87,11 +87,9 @@ describe('AuthenticationController', function () {
 
             $response = $this->deleteJson('/api/v1/authentication');
 
-            expect($response->status())->toBe(200);
+            expect($response->status())->toBe(204);
 
-            expect($response->json())->toMatchArray([
-                'message' => 'signout successful',
-            ]);
+            expect($response->getContent())->toBe('');
         });
 
         test('returns 401 when not authenticated', function () {
