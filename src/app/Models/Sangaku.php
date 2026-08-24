@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Sangaku extends Model
@@ -60,6 +61,14 @@ class Sangaku extends Model
     {
         // 固定入力は提示順に意味があるため、常に登録順で取得する
         return $this->hasMany(FixedInput::class)->orderBy('id');
+    }
+
+    /**
+     * @return BelongsToMany<User, $this>
+     */
+    public function savedByUsers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_sangaku_saves');
     }
 
     /**

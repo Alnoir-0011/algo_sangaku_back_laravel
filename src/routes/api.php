@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\V1\AuthenticationController;
+use App\Http\Controllers\V1\SangakuSaveController;
 use App\Http\Controllers\V1\SangakusController;
 use App\Http\Controllers\V1\ShrineSangakusController;
 use App\Http\Controllers\V1\ShrinesController;
@@ -18,6 +19,8 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/authentication', [AuthenticationController::class, 'destroy']);
+
+        Route::post('/sangakus/{sangaku}/save', SangakuSaveController::class);
 
         Route::prefix('user')->group(function () {
             Route::apiResource('sangakus', UserSangakusController::class);
