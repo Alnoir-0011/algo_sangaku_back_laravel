@@ -5,6 +5,7 @@ use App\Models\Sangaku;
 use App\Models\Shrine;
 use App\Models\User;
 use App\Models\UserSangakuSave;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 
 // Rails 版と異なり Laravel 側に wrap_parameters 相当の機能はないため、
@@ -13,8 +14,10 @@ use Laravel\Sanctum\Sanctum;
 //
 // フィクスチャとして直接 Answer を作成する箇所は、created イベント経由で
 // AnswerObserver/AnswerResultObserver が発火し実際に paiza.io へリクエストして
-// しまうため Answer::withoutEvents() でイベントを無効化している
-// （POST エンドポイント自体をテストする箇所は実際の挙動を見るためそのまま）。
+// しまうため Answer::withoutEvents() でイベントを無効化している。
+// POST エンドポイント自体をテストする箇所は実際の Observer チェーンを通すが、
+// 本物の paiza.io への通信は非決定的（CI からの到達性・レート制限等）で
+// テストを不安定にするため Http::fake() でスタブする。
 describe('SavedSangakuAnswersController', function () {
     describe('POST /api/v1/user/saved_sangakus/{sangaku}/answers', function () {
         test('アクセストークンありの場合、Answerを作成しJSON形式で返す', function () {
@@ -25,6 +28,12 @@ describe('SavedSangakuAnswersController', function () {
             UserSangakuSave::query()->create(['user_id' => $user->id, 'sangaku_id' => $sangaku->id]);
 
             Sanctum::actingAs($user);
+
+            Http::fake([
+                'api.paiza.io/runners/create.json*' => Http::response(['id' => 'test-runner-id']),
+                'api.paiza.io/runners/get_status.json*' => Http::response(['status' => 'completed']),
+                'api.paiza.io/runners/get_details.json*' => Http::response(['stdout' => "Hello world\n", 'stderr' => null]),
+            ]);
 
             $countBefore = Answer::count();
 
