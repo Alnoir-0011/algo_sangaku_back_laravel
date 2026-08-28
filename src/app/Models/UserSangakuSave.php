@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class UserSangakuSave extends Model
 {
@@ -22,5 +23,10 @@ class UserSangakuSave extends Model
     public function sangaku(): BelongsTo
     {
         return $this->belongsTo(Sangaku::class);
+    }
+
+    public function answer(): HasOne
+    {
+        return $this->hasOne(Answer::class);
     }
 }

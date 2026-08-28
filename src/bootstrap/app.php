@@ -3,6 +3,7 @@
 use App\Exceptions\ApiExceptionRenderer;
 use App\Exceptions\GooglePlacesApiException;
 use App\Exceptions\InvalidGoogleTokenException;
+use App\Exceptions\PaizaIoApiException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\QueryException;
@@ -70,6 +71,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(fn (AuthorizationException $e, Request $request) => ApiExceptionRenderer::render(403, 'Forbidden'));
 
         $exceptions->render(fn (GooglePlacesApiException $e, Request $request) => ApiExceptionRenderer::render(502, 'Bad Gateway'));
+
+        $exceptions->render(fn (PaizaIoApiException $e, Request $request) => ApiExceptionRenderer::render(502, 'Bad Gateway'));
 
         $exceptions->render(fn (HttpExceptionInterface $e, Request $request) => ApiExceptionRenderer::render($e->getStatusCode(), 'Error'));
 

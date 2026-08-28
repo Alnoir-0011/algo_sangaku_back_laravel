@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Sangaku extends Model
 {
@@ -69,6 +70,22 @@ class Sangaku extends Model
     public function savedByUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_sangaku_saves');
+    }
+
+    /**
+     * @return HasManyThrough<Answer, UserSangakuSave, $this>
+     */
+    public function answers(): HasManyThrough
+    {
+        return $this->hasManyThrough(Answer::class, UserSangakuSave::class);
+    }
+
+    /**
+     * @return HasMany<UserSangakuSave, $this>
+     */
+    public function userSangakuSaves(): HasMany
+    {
+        return $this->hasMany(UserSangakuSave::class);
     }
 
     /**

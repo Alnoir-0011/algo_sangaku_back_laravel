@@ -42,4 +42,9 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
     ],
 
+    'paiza_io' => [
+        // 未設定時は paiza.io のゲスト実行枠にフォールバックする
+        'api_key' => env('PAIZAIO_API_KEY', 'guest'),
+    ],
+
 ];

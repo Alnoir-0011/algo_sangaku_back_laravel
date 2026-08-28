@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Answer;
+use App\Models\AnswerResult;
+use App\Observers\AnswerObserver;
+use App\Observers\AnswerResultObserver;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,5 +30,10 @@ class AppServiceProvider extends ServiceProvider
         // Postgres が範囲外エラー（22003）を返して 500 になるため。
         Route::pattern('sangaku', '[0-9]{1,18}');
         Route::pattern('shrine', '[0-9]{1,18}');
+        Route::pattern('answer', '[0-9]{1,18}');
+        Route::pattern('answerResult', '[0-9]{1,18}');
+
+        Answer::observe(AnswerObserver::class);
+        AnswerResult::observe(AnswerResultObserver::class);
     }
 }
