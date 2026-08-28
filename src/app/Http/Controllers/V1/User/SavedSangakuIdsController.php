@@ -21,7 +21,6 @@ class SavedSangakuIdsController extends BaseController
     }
 
     /**
-     *
      * @return array<int, int>
      */
     private function requestedSangakuIds(Request $request): array
