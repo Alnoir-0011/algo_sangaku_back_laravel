@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\V1\AuthenticationController;
+use App\Http\Controllers\V1\ProfilesController;
 use App\Http\Controllers\V1\SangakuSaveController;
 use App\Http\Controllers\V1\SangakusController;
 use App\Http\Controllers\V1\ShrineSangakusController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\V1\ShrinesController;
 use App\Http\Controllers\V1\User\AnswerResultsController;
 use App\Http\Controllers\V1\User\AnswersController;
 use App\Http\Controllers\V1\User\DedicateController;
+use App\Http\Controllers\V1\User\ProfilesController as UserProfilesController;
 use App\Http\Controllers\V1\User\ResultsController;
 use App\Http\Controllers\V1\User\SangakusController as UserSangakusController;
 use App\Http\Controllers\V1\User\SavedSangakuAnswersController;
@@ -22,6 +24,7 @@ Route::prefix('v1')->group(function () {
     Route::apiResource('shrines', ShrinesController::class)->only(['index', 'show']);
     Route::get('/sangakus/{sangaku}', [SangakusController::class, 'show']);
     Route::get('/shrines/{shrine}/sangakus', [ShrineSangakusController::class, 'index']);
+    Route::get('/profiles/{user}', [ProfilesController::class, 'show']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/authentication', [AuthenticationController::class, 'destroy']);
@@ -38,6 +41,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/answers/{answer}', [AnswersController::class, 'show']);
             Route::get('/answer_results/{answerResult}', [AnswerResultsController::class, 'show']);
             Route::get('/saved_sangaku_ids', [SavedSangakuIdsController::class, 'index']);
+            Route::get('/profile', [UserProfilesController::class, 'show']);
+            Route::patch('/profile', [UserProfilesController::class, 'update']);
         });
     });
 });
