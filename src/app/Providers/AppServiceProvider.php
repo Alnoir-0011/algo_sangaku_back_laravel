@@ -32,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
         Route::pattern('shrine', '[0-9]{1,18}');
         Route::pattern('answer', '[0-9]{1,18}');
         Route::pattern('answerResult', '[0-9]{1,18}');
+        Route::pattern('user', '[0-9]{1,18}');
 
         Answer::observe(AnswerObserver::class);
         AnswerResult::observe(AnswerResultObserver::class);

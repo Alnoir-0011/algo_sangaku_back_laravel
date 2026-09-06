@@ -25,6 +25,7 @@ class User extends Authenticatable
     {
         return [
             'role' => Role::class,
+            'show_answer_count' => 'boolean',
         ];
     }
 
@@ -73,5 +74,15 @@ class User extends Authenticatable
         return AnswerResult::query()->whereHas('answer.userSangakuSave', function (Builder $query) {
             $query->where('user_id', $this->id);
         });
+    }
+
+    /**
+     * 奉納済み（shrine_idが非null）の算額を、shrineをeager loadした状態で返す。
+     *
+     * @return HasMany<Sangaku, $this>
+     */
+    public function dedicatedSangakusWithShrine(): HasMany
+    {
+        return $this->sangakus()->whereNotNull('shrine_id')->with('shrine');
     }
 }
